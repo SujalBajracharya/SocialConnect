@@ -1,0 +1,324 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Rahul Kumar",
+      "email": "rahul@mail.com",
+      "password": "1234",
+      "bio": "Love traveling and photography",
+      "profilePicture": "",
+      "isAdmin": false,
+      "isBanned": true
+    },
+    {
+      "id": "2",
+      "name": "Bobby Deol",
+      "email": "bob@mail.com",
+      "password": "1234",
+      "bio": "Tech enthusiast and coffee lover",
+      "profilePicture": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+      "isAdmin": false
+    },
+    {
+      "id": "3",
+      "name": "Ram Yadav",
+      "email": "ram@mail.com",
+      "password": "1234",
+      "bio": "Artist and nature lover",
+      "profilePicture": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+      "isAdmin": false
+    },
+    {
+      "id": "4",
+      "name": "Sujal",
+      "email": "admin@mail.com",
+      "password": "admin",
+      "bio": "Site Administrator",
+      "profilePicture": "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=150&h=150&fit=crop&crop=face",
+      "isAdmin": true
+    }
+  ],
+  "posts": [
+    {
+      "id": "1",
+      "userId": "1",
+      "content": "Just visited the beautiful mountains! The view was absolutely breathtaking.",
+      "image": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop",
+      "timestamp": "2025-08-12T09:00:00Z"
+    },
+    {
+      "id": "2",
+      "userId": "2",
+      "content": "Working on a new React project. Loving the new features!",
+      "image": "",
+      "timestamp": "2025-08-12T10:30:00Z"
+    },
+    {
+      "id": "3",
+      "userId": "3",
+      "content": "Finished my latest painting today. Art is my passion!",
+      "image": "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&h=400&fit=crop",
+      "timestamp": "2025-08-12T14:15:00Z"
+    },
+    {
+      "id": "4",
+      "userId": "3",
+      "content": "This is a post from Sujal",
+      "image": "https://imgs.search.brave.com/yjPScV7Z00R_LrWAUPzQOhI5ss2RkGmP-osgSAj6uAs/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLmt5/bS1jZG4uY29tL2Vu/dHJpZXMvaWNvbnMv/ZmFjZWJvb2svMDAw/LzAwOC84MzAvbGlu/c2FuaXR5LmpwZw",
+      "timestamp": "2025-08-15T15:55:38.129Z"
+    }
+  ],
+  "comments": [
+    {
+      "id": "1",
+      "postId": "1",
+      "userId": "2",
+      "text": "Beautiful! I need to visit there too.",
+      "timestamp": "2025-08-12T10:00:00Z"
+    },
+    {
+      "id": "2",
+      "postId": "1",
+      "userId": "3",
+      "text": "Amazing view! Thanks for sharing.",
+      "timestamp": "2025-08-12T11:00:00Z"
+    },
+    {
+      "id": "3",
+      "postId": "3",
+      "userId": "1",
+      "text": "Your artwork is incredible!",
+      "timestamp": "2025-08-12T15:00:00Z"
+    },
+    {
+      "id": "4",
+      "postId": "2",
+      "userId": "3",
+      "text": "This is a new comment on the second post!",
+      "timestamp": "2025-08-14T15:54:08.086Z"
+    },
+    {
+      "id": "5",
+      "postId": "1",
+      "userId": "3",
+      "text": "wow",
+      "timestamp": "2025-08-15T15:53:42.073Z"
+    },
+    {
+      "id": "0e47",
+      "postId": "2",
+      "userId": "2",
+      "text": "Testing Comment Feature ",
+      "timestamp": "2025-08-27T03:07:00.591Z"
+    },
+    {
+      "id": "e971",
+      "postId": "1",
+      "userId": "1",
+      "text": "Test Comment",
+      "timestamp": "2025-08-27T03:40:36.035Z"
+    }
+  ],
+  "likes": [
+    {
+      "id": "1",
+      "postId": "1",
+      "userId": "2"
+    },
+    {
+      "id": "2",
+      "postId": "1",
+      "userId": "3"
+    },
+    {
+      "id": "3",
+      "postId": "3",
+      "userId": "1"
+    },
+    {
+      "id": "4",
+      "postId": "3",
+      "userId": "2"
+    },
+    {
+      "id": "5",
+      "postId": "1",
+      "userId": "1"
+    }
+  ],
+  "followers": [
+    {
+      "id": "1",
+      "userId": "1",
+      "followerId": "2"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "followerId": "3"
+    },
+    {
+      "id": "3",
+      "userId": "2",
+      "followerId": "1"
+    },
+    {
+      "id": "4",
+      "userId": "3",
+      "followerId": "1"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "1",
+      "userId": "1",
+      "type": "like",
+      "relatedId": "1",
+      "message": "Bob liked your post",
+      "timestamp": "2025-08-12T11:00:00Z",
+      "read": true
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "type": "comment",
+      "relatedId": "1",
+      "message": "Ram commented on your post",
+      "timestamp": "2025-08-12T11:30:00Z",
+      "read": true
+    },
+    {
+      "id": "3",
+      "userId": "3",
+      "type": "follow",
+      "relatedId": "1",
+      "message": "Alice started following you",
+      "timestamp": "2025-08-12T12:00:00Z",
+      "read": true
+    },
+    {
+      "id": "4",
+      "userId": "2",
+      "type": "comment",
+      "relatedId": "2",
+      "message": "Rahul Kumar commented on your post",
+      "timestamp": "2025-08-14T15:54:08.162Z",
+      "read": false
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "type": "follow",
+      "relatedId": "3",
+      "message": "Rahul Kumar started following you",
+      "timestamp": "2025-08-14T15:54:59.348Z",
+      "read": true
+    },
+    {
+      "id": "6",
+      "userId": "1",
+      "type": "like",
+      "relatedId": "1",
+      "message": "Rahul Kumar liked your post",
+      "timestamp": "2025-08-15T15:53:48.281Z",
+      "read": true
+    },
+    {
+      "id": "7",
+      "userId": "1",
+      "type": "like",
+      "relatedId": "1",
+      "message": "Rahul Kumar liked your post",
+      "timestamp": "2025-08-27T01:42:26.120Z",
+      "read": false
+    },
+    {
+      "id": "4c3b",
+      "userId": "4",
+      "type": "follow",
+      "relatedId": "2",
+      "message": "Bobby Deol started following you",
+      "timestamp": "2025-08-27T03:12:24.331Z",
+      "read": false
+    }
+  ],
+  "chats": [
+    {
+      "id": "ff29",
+      "user1Id": "1",
+      "user2Id": "2",
+      "createdAt": "2025-08-15T15:15:48.805Z"
+    },
+    {
+      "id": "86d4",
+      "user1Id": "4",
+      "user2Id": "2",
+      "createdAt": "2025-08-16T14:47:03.271Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "a8f7",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "Hey Bob! How are you doing?",
+      "timestamp": "2025-08-15T15:17:09.333Z"
+    },
+    {
+      "id": "7499",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "This is a test of the chat feature!",
+      "timestamp": "2025-08-15T15:17:38.097Z"
+    },
+    {
+      "id": "76f2",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "hi",
+      "timestamp": "2025-08-15T15:53:20.779Z"
+    },
+    {
+      "id": "98e6",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "how are you",
+      "timestamp": "2025-08-15T15:53:29.409Z"
+    },
+    {
+      "id": "b04a",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "hi",
+      "timestamp": "2025-08-15T15:59:44.754Z"
+    },
+    {
+      "id": "a0af",
+      "chatId": "86d4",
+      "senderId": "4",
+      "text": "Testing admin message",
+      "timestamp": "2025-08-26T15:58:55.316Z"
+    },
+    {
+      "id": "65c1",
+      "chatId": "86d4",
+      "senderId": "4",
+      "text": "testing dark mode",
+      "timestamp": "2025-08-26T16:14:08.116Z"
+    },
+    {
+      "id": "f3c2",
+      "chatId": "ff29",
+      "senderId": "2",
+      "text": "hi",
+      "timestamp": "2025-08-27T03:11:02.837Z"
+    },
+    {
+      "id": "01c0",
+      "chatId": "ff29",
+      "senderId": "1",
+      "text": "hell",
+      "timestamp": "2025-08-27T03:22:12.938Z"
+    }
+  ]
+}
