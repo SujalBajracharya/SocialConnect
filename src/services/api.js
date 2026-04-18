@@ -1,171 +1,304 @@
-import axios from "axios";
+// src/services/api.js
 
-// Base URL for the backend API
-const API_BASE_URL = "http://localhost:4000";
+// ❌ REMOVED: axios (no longer using JSON-server)
+// import axios from "axios";
 
-// Create an Axios instance with the base URL
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
+// ✅ ADDED: Firebase Firestore
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy } from "firebase/firestore";
+import { db } from "../firebase";
+
+// Helper to simulate axios response format so we don't break existing components
+const toAxiosRes = (data) => ({ data });
 
 // ==================== Users API ====================
 
 // Get all users
-export const getUsers = () => api.get("/users");
+export const getUsers = async () => {
+  const snapshot = await getDocs(collection(db, "users"));
+  return toAxiosRes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
 
 // Get a user by ID
-export const getUserById = (id) => api.get(`/users/${id}`);
+export const getUserById = async (id) => {
+  const docSnap = await getDoc(doc(db, "users", String(id)));
+  return toAxiosRes({ id: docSnap.id, ...docSnap.data() });
+};
 
 // Update user info by ID
-export const updateUser = (id, userData) => api.put(`/users/${id}`, userData);
+export const updateUser = async (id, userData) => {
+  const userRef = doc(db, "users", String(id));
+  await updateDoc(userRef, userData);
+  const updated = await getDoc(userRef);
+  return toAxiosRes({ id: updated.id, ...updated.data() });
+};
 
 // Delete a user by ID (admin only)
-export const deleteUser = (id) => api.delete(`/users/${id}`); // Admin function
+export const deleteUser = async (id) => {
+  await deleteDoc(doc(db, "users", String(id)));
+  return toAxiosRes({});
+};
 
 // ==================== Posts API ====================
 
 // Get paginated posts, sorted by timestamp, with user info expanded
-/*  {
-      "id": 15,
-      "title": "New Post",
-      "content": "Hello world",
-      "timestamp": 12,
-      "userId": 3,
-      "user": {      // <-- added because of _expand=user
-        "id": 3,
-        "name": "Sujal",
-        "email": "sujal@example.com"
-      }
-    }
-*/
-export const getPosts = (page = 1, limit = 10) => api.get(`/posts?_page=${page}&_limit=${limit}&_sort=timestamp&_order=desc&_expand=user`);
+export const getPosts = async (page = 1, limit = 10) => {
+  // Using basic firestore query to fetch posts and order by timestamp
+  const postsQuery = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+  const snapshot = await getDocs(postsQuery);
+  const allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Apply pagination manually client-side (for simplicity handling _page logic)
+  const startIndex = (page - 1) * limit;
+  const paginatedPosts = allPosts.slice(startIndex, startIndex + limit);
+
+  // Simulate json-server's _expand=user
+  const postsWithUser = await Promise.all(paginatedPosts.map(async (post) => {
+    const userSnap = await getDoc(doc(db, "users", String(post.userId)));
+    return { ...post, user: { id: userSnap.id, ...userSnap.data() } };
+  }));
+
+  return toAxiosRes(postsWithUser);
+};
 
 // Get a single post by ID, with user info expanded
-export const getPostById = (id) => api.get(`/posts/${id}?_expand=user`);
+export const getPostById = async (id) => {
+  const docSnap = await getDoc(doc(db, "posts", String(id)));
+  const post = { id: docSnap.id, ...docSnap.data() };
+
+  // Expand user info
+  const userSnap = await getDoc(doc(db, "users", String(post.userId)));
+  post.user = { id: userSnap.id, ...userSnap.data() };
+
+  return toAxiosRes(post);
+};
 
 // Create a new post
-export const createPost = (postData) => api.post("/posts", postData);
+export const createPost = async (postData) => {
+  const docRef = await addDoc(collection(db, "posts"), postData);
+  return toAxiosRes({ id: docRef.id, ...postData });
+};
 
 // Update a post by ID
-export const updatePost = (id, postData) => api.put(`/posts/${id}`, postData);
+export const updatePost = async (id, postData) => {
+  const postRef = doc(db, "posts", String(id));
+  await updateDoc(postRef, postData);
+  const updated = await getDoc(postRef);
+  return toAxiosRes({ id: updated.id, ...updated.data() });
+};
 
 // Delete a post by ID (admin only)
-export const deletePost = (id) => api.delete(`/posts/${id}`); // Admin function
+export const deletePost = async (id) => {
+  await deleteDoc(doc(db, "posts", String(id)));
+  return toAxiosRes({});
+};
 
 // Get all posts by a specific user, sorted by timestamp
-export const getPostsByUserId = (userId) =>
-  api.get(`/posts?userId=${userId}&_sort=timestamp&_order=desc`);
+export const getPostsByUserId = async (userId) => {
+  const q = query(collection(db, "posts"), where("userId", "==", String(userId)));
+  const snapshot = await getDocs(q);
+  const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  return toAxiosRes(posts);
+};
 
 // ==================== Comments API ====================
 
 // Get all comments for a post, with user info expanded, sorted by timestamp
-export const getCommentsByPostId = (postId) =>
-  api.get(`/comments?postId=${postId}&_expand=user&_sort=timestamp&_order=asc`);
+export const getCommentsByPostId = async (postId) => {
+  const q = query(collection(db, "comments"), where("postId", "==", String(postId)));
+  const snapshot = await getDocs(q);
+  const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  comments.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  // Expand user info
+  const commentsWithUser = await Promise.all(comments.map(async (comment) => {
+    const userSnap = await getDoc(doc(db, "users", String(comment.userId)));
+    return { ...comment, user: { id: userSnap.id, ...userSnap.data() } };
+  }));
+
+  return toAxiosRes(commentsWithUser);
+};
 
 // Create a new comment
-export const createComment = (commentData) =>
-  api.post("/comments", commentData);
+export const createComment = async (commentData) => {
+  const docRef = await addDoc(collection(db, "comments"), commentData);
+  return toAxiosRes({ id: docRef.id, ...commentData });
+};
 
 // Delete a comment by ID (admin only)
-export const deleteComment = (id) => api.delete(`/comments/${id}`); // Admin function
+export const deleteComment = async (id) => {
+  await deleteDoc(doc(db, "comments", String(id)));
+  return toAxiosRes({});
+};
 
 // ==================== Likes API ====================
 
 // Get all likes for a post
-export const getLikesByPostId = (postId) => api.get(`/likes?postId=${postId}`);
+export const getLikesByPostId = async (postId) => {
+  const q = query(collection(db, "likes"), where("postId", "==", String(postId)));
+  const snapshot = await getDocs(q);
+  return toAxiosRes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
 
 // Create a new like
-export const createLike = (likeData) => api.post("/likes", likeData);
+export const createLike = async (likeData) => {
+  const docRef = await addDoc(collection(db, "likes"), likeData);
+  return toAxiosRes({ id: docRef.id, ...likeData });
+};
 
 // Delete a like by ID
-export const deleteLike = (id) => api.delete(`/likes/${id}`);
+export const deleteLike = async (id) => {
+  await deleteDoc(doc(db, "likes", String(id)));
+  return toAxiosRes({});
+};
 
 // Get a like by user and post (to check if user already liked the post)
-export const getLikeByUserAndPost = (userId, postId) =>
-  api.get(`/likes?userId=${userId}&postId=${postId}`);
+export const getLikeByUserAndPost = async (userId, postId) => {
+  const q = query(collection(db, "likes"), where("userId", "==", String(userId)), where("postId", "==", String(postId)));
+  const snapshot = await getDocs(q);
+  return toAxiosRes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
 
 // ==================== Followers API ====================
 
 // Get all followers for a user, with follower info expanded
-export const getFollowersByUserId = (userId) =>
-  api.get(`/followers?userId=${userId}&_expand=follower`);
+export const getFollowersByUserId = async (userId) => {
+  const q = query(collection(db, "followers"), where("userId", "==", String(userId)));
+  const snapshot = await getDocs(q);
+  const followers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Expand follower info
+  const expanded = await Promise.all(followers.map(async (f) => {
+    const followerSnap = await getDoc(doc(db, "users", String(f.followerId)));
+    return { ...f, follower: { id: followerSnap.id, ...followerSnap.data() } };
+  }));
+  return toAxiosRes(expanded);
+};
 
 // Get all users a user is following, with user info expanded
-export const getFollowingByUserId = (userId) =>
-  api.get(`/followers?followerId=${userId}&_expand=user`);
+export const getFollowingByUserId = async (userId) => {
+  const q = query(collection(db, "followers"), where("followerId", "==", String(userId)));
+  const snapshot = await getDocs(q);
+  const following = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Expand user info
+  const expanded = await Promise.all(following.map(async (f) => {
+    const userSnap = await getDoc(doc(db, "users", String(f.userId)));
+    return { ...f, user: { id: userSnap.id, ...userSnap.data() } };
+  }));
+  return toAxiosRes(expanded);
+};
 
 // Create a new follow relationship
-export const createFollow = (followData) => api.post("/followers", followData);
+export const createFollow = async (followData) => {
+  const docRef = await addDoc(collection(db, "followers"), followData);
+  return toAxiosRes({ id: docRef.id, ...followData });
+};
 
 // Delete a follow relationship by ID
-export const deleteFollow = (id) => api.delete(`/followers/${id}`);
+export const deleteFollow = async (id) => {
+  await deleteDoc(doc(db, "followers", String(id)));
+  return toAxiosRes({});
+};
 
 // Get a specific follow relationship between two users
-export const getFollowRelation = (userId, followerId) =>
-  api.get(`/followers?userId=${userId}&followerId=${followerId}`);
+export const getFollowRelation = async (userId, followerId) => {
+  const q = query(collection(db, "followers"), where("userId", "==", String(userId)), where("followerId", "==", String(followerId)));
+  const snapshot = await getDocs(q);
+  return toAxiosRes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+};
 
 // ==================== Notifications API ====================
 
 // Get all notifications for a user, sorted by timestamp
-export const getNotificationsByUserId = (userId) =>
-  api.get(`/notifications?userId=${userId}&_sort=timestamp&_order=desc`);
+export const getNotificationsByUserId = async (userId) => {
+  const q = query(collection(db, "notifications"), where("userId", "==", String(userId)));
+  const snapshot = await getDocs(q);
+  const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  return toAxiosRes(notifications);
+};
 
 // Create a new notification
-export const createNotification = (notificationData) =>
-  api.post("/notifications", notificationData);
+export const createNotification = async (notificationData) => {
+  const docRef = await addDoc(collection(db, "notifications"), notificationData);
+  return toAxiosRes({ id: docRef.id, ...notificationData });
+};
 
 // Update a notification by ID
-export const updateNotification = (id, notificationData) =>
-  api.put(`/notifications/${id}`, notificationData);
+export const updateNotification = async (id, notificationData) => {
+  const notifRef = doc(db, "notifications", String(id));
+  await updateDoc(notifRef, notificationData);
+  const updated = await getDoc(notifRef);
+  return toAxiosRes({ id: updated.id, ...updated.data() });
+};
 
 // Delete a notification by ID
-export const deleteNotification = (id) => api.delete(`/notifications/${id}`);
+export const deleteNotification = async (id) => {
+  await deleteDoc(doc(db, "notifications", String(id)));
+  return toAxiosRes({});
+};
 
 // ==================== Search API ====================
 
 // Search users by name (case-insensitive, partial match)
-export const searchUsers = (query) => api.get(`/users?name_like=${query}`);
+export const searchUsers = async (queryStr) => {
+  // Client side filtering since firestore doesn't natively support partial string matches out of the box
+  const snapshot = await getDocs(collection(db, "users"));
+  const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const filtered = users.filter(user => user.name && user.name.toLowerCase().includes(queryStr.toLowerCase()));
+  return toAxiosRes(filtered);
+};
 
 // ==================== Chat API ====================
 
-// Get all chats for a user (client-side filter due to json-server limitations)
-export const getChatsByUserId = (userId) => {
-  // Get all chats and filter on client side since json-server doesn't support complex OR queries
-  return api.get("/chats").then((response) => {
-    const filteredChats = response.data.filter(
-      (chat) => chat.user1Id === userId || chat.user2Id === userId
-    );
-    return { data: filteredChats };
-  });
+// Get all chats for a user
+export const getChatsByUserId = async (userId) => {
+  const snapshot = await getDocs(collection(db, "chats"));
+  const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const filteredChats = chats.filter(
+    (chat) => chat.user1Id === String(userId) || chat.user2Id === String(userId)
+  );
+  return toAxiosRes(filteredChats);
 };
 
 // Get a chat by its ID
-export const getChatById = (chatId) => api.get(`/chats/${chatId}`);
+export const getChatById = async (chatId) => {
+  const docSnap = await getDoc(doc(db, "chats", String(chatId)));
+  return toAxiosRes({ id: docSnap.id, ...docSnap.data() });
+};
 
 // Create a new chat
-export const createChat = (chatData) => api.post("/chats", chatData);
+export const createChat = async (chatData) => {
+  const docRef = await addDoc(collection(db, "chats"), chatData);
+  return toAxiosRes({ id: docRef.id, ...chatData });
+};
 
-// Get a chat by participant IDs (client-side filter)
-export const getChatByParticipants = (user1Id, user2Id) => {
-  return api.get("/chats").then((response) => {
-    const filteredChats = response.data.filter(
-      (chat) =>
-        (chat.user1Id === user1Id && chat.user2Id === user2Id) ||
-        (chat.user1Id === user2Id && chat.user2Id === user1Id)
-    );
-    return { data: filteredChats };
-  });
+// Get a chat by participant IDs
+export const getChatByParticipants = async (user1Id, user2Id) => {
+  const snapshot = await getDocs(collection(db, "chats"));
+  const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const filteredChats = chats.filter(
+    (chat) =>
+      (chat.user1Id === String(user1Id) && chat.user2Id === String(user2Id)) ||
+      (chat.user1Id === String(user2Id) && chat.user2Id === String(user1Id))
+  );
+  return toAxiosRes(filteredChats);
 };
 
 // ==================== Messages API ====================
 
 // Get all messages for a chat, sorted by timestamp
-export const getMessagesByChatId = (chatId) =>
-  api.get(`/messages?chatId=${chatId}&_sort=timestamp&_order=asc`);
+export const getMessagesByChatId = async (chatId) => {
+  const q = query(collection(db, "messages"), where("chatId", "==", String(chatId)));
+  const snapshot = await getDocs(q);
+  const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  return toAxiosRes(messages);
+};
 
 // Create a new message
-export const createMessage = (messageData) =>
-  api.post("/messages", messageData);
-
-// Export the Axios instance for custom requests if needed
-export default api;
+export const createMessage = async (messageData) => {
+  const docRef = await addDoc(collection(db, "messages"), messageData);
+  return toAxiosRes({ id: docRef.id, ...messageData });
+};

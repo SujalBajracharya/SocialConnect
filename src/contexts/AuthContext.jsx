@@ -1,10 +1,17 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+
+// ❌ REMOVED: axios (no longer using JSON-server)
+// import axios from "axios";
+
+// ✅ ADDED: Firebase Firestore
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import bcrypt from "bcryptjs";
 
 // Create the authentication context
 const AuthContext = createContext();
 
-// Custom hook to use the AuthContext
+// Custom hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -13,12 +20,11 @@ export const useAuth = () => {
   return context;
 };
 
-// AuthProvider component to wrap the app and provide auth state
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Stores the current user object
-  const [loading, setLoading] = useState(true); // Tracks loading state
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // On mount, check localStorage for a logged-in user
+  // Load user from localStorage on app start
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -27,81 +33,119 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Login function: checks credentials against backend
+  // 🔐 LOGIN (Firebase version)
   const login = async (email, password) => {
     try {
-      const response = await axios.get("http://localhost:4000/users");
-      const users = response.data;
-      // Find user with matching email and password
-      const foundUser = users.find(
-        (u) => u.email === email && u.password === password
-      );
+      // ❌ OLD (JSON-server):
+      // const response = await axios.get("http://localhost:4000/users");
+      // const users = response.data;
+      // const foundUser = users.find(...)
+
+      // ✅ NEW (Firebase Firestore)
+      const snapshot = await getDocs(collection(db, "users"));
+
+      const users = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Finding user and checking password (supports both plain text for old accounts and bcrypt for new)
+      let foundUser = null;
+      for (const u of users) {
+        if (u.email === email) {
+          const isHashed = u.password && u.password.startsWith("$2");
+          const isMatch = isHashed ? await bcrypt.compare(password, u.password) : u.password === password;
+          if (isMatch) {
+            foundUser = u;
+            break;
+          }
+        }
+      }
 
       if (foundUser) {
-        // Remove password before storing user info
+        // remove password before storing in frontend
         const userWithoutPassword = { ...foundUser };
         delete userWithoutPassword.password;
+
         setUser(userWithoutPassword);
         localStorage.setItem("user", JSON.stringify(userWithoutPassword));
+
         return { success: true };
-      } else {
-        return { success: false, error: "Invalid credentials" };
       }
+
+      return { success: false, error: "Invalid credentials" };
     } catch (error) {
       return { success: false, error: "Login failed" };
     }
   };
 
-  // Register function: creates a new user if email is not taken
+  // 📝 REGISTER (Firebase version)
   const register = async (name, email, password) => {
     try {
-      const response = await axios.get("http://localhost:4000/users");
-      const users = response.data;
-      // Check if user already exists
+      // ❌ OLD:
+      // const response = await axios.get("/users")
+      // const createResponse = await axios.post("/users")
+
+      // ✅ NEW: Fetch users from Firestore
+      const snapshot = await getDocs(collection(db, "users"));
+
+      const users = snapshot.docs.map((doc) => doc.data());
+
+      // check if user exists
       const existingUser = users.find((u) => u.email === email);
 
       if (existingUser) {
         return { success: false, error: "User already exists" };
       }
 
-      // Create new user object
+      // Hash the password before storing
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // create new user object
       const newUser = {
         name,
         email,
-        password,
+        password: hashedPassword,
         bio: "",
-        profilePicture: `https://as2.ftcdn.net/v2/jpg/05/89/93/27/1000_F_589932782_vQAEAZhHnq1QCGu5ikwrYaQD0Mmurm0N.webp`,
+        profilePicture:
+          "https://as2.ftcdn.net/v2/jpg/05/89/93/27/1000_F_589932782_vQAEAZhHnq1QCGu5ikwrYaQD0Mmurm0N.webp",
+        isAdmin: false,
+        isBanned: false,
       };
 
-      // Send POST request to create user
-      const createResponse = await axios.post(
-        "http://localhost:4000/users",
-        newUser
-      );
-      const createdUser = { ...createResponse.data };
+      // ✅ Firestore create document (replaces axios.post)
+      const docRef = await addDoc(collection(db, "users"), newUser);
+
+      const createdUser = {
+        id: docRef.id,
+        ...newUser,
+      };
+
+      // remove password before saving to frontend
       delete createdUser.password;
 
       setUser(createdUser);
       localStorage.setItem("user", JSON.stringify(createdUser));
+
       return { success: true };
     } catch (error) {
       return { success: false, error: "Registration failed" };
     }
   };
 
-  // Logout function: clears user state and localStorage
+  // 🚪 LOGOUT (unchanged)
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
   };
 
-  // Update user info in state and localStorage
+  // ✏️ UPDATE USER (unchanged for now)
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
     localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
-  // Context value to be provided to consumers
   const value = {
     user,
     login,
@@ -111,6 +155,5 @@ export const AuthProvider = ({ children }) => {
     loading,
   };
 
-  // Provide the context to child components
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
